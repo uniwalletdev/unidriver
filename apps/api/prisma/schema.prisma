@@ -1,0 +1,541 @@
+// UniDriver Prisma schema.
+//
+// Mirrors the canonical domain model in `@unidriver/shared` (enums share names + string
+// values 1:1). Money is stored as integer minor units (cents) with an explicit currency —
+// never floats (spec §5, §15).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------------------------------
+// Enums (mirror packages/shared/src/enums.ts)
+// ----------------------------------------------------------------------------
+
+enum Region {
+  US
+  CA
+  GB
+}
+
+enum UserRole {
+  OWNER
+  DRIVER
+  BOTH
+  ADMIN
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+enum TrustTier {
+  FOUNDATION
+  ESTABLISHED
+  TRUSTED
+  ELITE
+  CERTIFIED
+}
+
+enum OwnerTier {
+  LISTED
+  ACTIVE
+  PREMIER
+  ELITE_FLEET
+}
+
+enum VehicleTier {
+  STANDARD
+  COMFORT
+  PREMIUM
+  LUXURY
+  EXOTIC
+  XL_SUV
+  EV_STANDARD
+}
+
+enum VehicleStatus {
+  DRAFT
+  PENDING_INSPECTION
+  ACTIVE
+  ON_TRIP
+  MAINTENANCE
+  DELISTED
+  LISTED_DORMANT
+}
+
+enum InspectionType {
+  ONBOARDING
+  PRE_TRIP
+  POST_TRIP
+}
+
+enum AvailabilityRuleType {
+  RECURRING
+  ONE_OFF
+  HOLIDAY_MODE
+  BLOCKED
+}
+
+enum AllowedTripType {
+  RIDESHARE
+  CORPORATE
+  BOTH
+}
+
+enum FuelPolicy {
+  FULL_TO_FULL
+  LEVEL_TO_LEVEL
+  EV_CHARGE_RETURN
+}
+
+enum ValuationSource {
+  HAGERTY
+  NADA_JDPOWER
+  MANUAL
+}
+
+enum BookingState {
+  REQUESTED
+  OWNER_REVIEW
+  APPROVED
+  INSURANCE_BOUND
+  CONFIRMED
+  DECLINED
+  PICKUP_PENDING
+  PICKUP_CONFIRMED
+  IN_PROGRESS
+  RETURN_PENDING
+  RETURN_CONFIRMED
+  CLAIM_WINDOW
+  SETTLED
+  CANCELLED
+}
+
+enum HandoffType {
+  PICKUP
+  RETURN
+}
+
+enum ExternalPlatform {
+  UBER
+  LYFT
+  UNIDRIVER_CORP
+  OTHER
+}
+
+enum TrustEventType {
+  AT_FAULT_ACCIDENT
+  VEHICLE_DAMAGE
+  MILEAGE_CAP_BREACH
+  LATE_RETURN
+  PASSENGER_COMPLAINT
+  FUEL_NONCOMPLIANCE
+  LATE_CANCELLATION
+  RESPONSE_TIME_FAILURE
+  CLEAN_BOOKING
+  TRIP_COMPLETED
+  MANUAL_ADJUSTMENT
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+  FLAGGED_REVIEW
+}
+
+enum CoverageState {
+  IDLE_OWNER_PERSONAL
+  LISTED_GAP
+  EN_ROUTE_TO_PICKUP
+  COMMERCIAL_ACTIVE
+  POST_TRIP_CLAIM_WINDOW
+}
+
+enum ClaimType {
+  DAMAGE
+  THEFT
+  LIABILITY
+  CLEANING
+  FUEL
+}
+
+enum ClaimStatus {
+  OPEN
+  INVESTIGATING
+  APPROVED
+  DENIED
+  PAID
+}
+
+enum BackgroundCheckStatus {
+  NOT_STARTED
+  PENDING
+  CLEAR
+  CONSIDER
+  SUSPENDED
+}
+
+// ----------------------------------------------------------------------------
+// Identity & Vetting (spec §5.1)
+// ----------------------------------------------------------------------------
+
+model User {
+  id        String     @id @default(cuid())
+  role      UserRole
+  email     String     @unique
+  phone     String     @unique
+  fullName  String
+  region    Region     @default(US)
+  status    UserStatus @default(PENDING)
+  createdAt DateTime   @default(now())
+
+  driverProfile  DriverProfile?
+  ownerProfile   OwnerProfile?
+  ownedVehicles  Vehicle[]            @relation("OwnerVehicles")
+  driverBookings Booking[]            @relation("DriverBookings")
+  ownerBookings  Booking[]            @relation("OwnerBookings")
+  trustEvents    TrustEvent[]
+  trustSnapshots TrustScoreSnapshot[]
+
+  @@index([region, role])
+  @@index([status])
+}
+
+model DriverProfile {
+  userId                String                @id
+  user                  User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  licenceNumber         String
+  licenceState          String
+  licenceVerifiedAt     DateTime?
+  backgroundCheckId     String?
+  backgroundCheckStatus BackgroundCheckStatus @default(NOT_STARTED)
+  trustScore            Int                   @default(0)
+  trustTier             TrustTier             @default(FOUNDATION)
+  completedTrips        Int                   @default(0)
+  atFaultAccidents      Int                   @default(0)
+  lifetimeMiles         Int                   @default(0)
+  joinedAt              DateTime              @default(now())
+  lastActiveAt          DateTime?
+  bankAccountConnected  Boolean               @default(false)
+
+  @@index([trustTier])
+}
+
+model OwnerProfile {
+  userId                 String    @id
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ownerTier              OwnerTier @default(LISTED)
+  payoutAccountId        String?
+  taxIdOnFile            Boolean   @default(false)
+  joinedAt               DateTime  @default(now())
+  totalEarnedToDateCents Int       @default(0)
+
+  @@index([ownerTier])
+}
+
+// ----------------------------------------------------------------------------
+// Vehicle & Listing (spec §5.2)
+// ----------------------------------------------------------------------------
+
+model Vehicle {
+  id                   String           @id @default(cuid())
+  ownerId              String
+  owner                User             @relation("OwnerVehicles", fields: [ownerId], references: [id], onDelete: Cascade)
+  make                 String
+  model                String
+  year                 Int
+  vin                  String           @unique
+  plate                String
+  region               Region           @default(US)
+  tier                 VehicleTier
+  status               VehicleStatus    @default(DRAFT)
+  agreedValueCents     Int?
+  valuationSource      ValuationSource?
+  valuationDate        DateTime?
+  smartcarConnected    Boolean          @default(false)
+  gpsDeviceId          String?
+  mileageCapPerBooking Int?
+  fuelPolicy           FuelPolicy       @default(FULL_TO_FULL)
+  cleaningTier         String           @default("standard")
+  allowedTripTypes     AllowedTripType  @default(RIDESHARE)
+  geofenceZoneId       String?
+  geofenceZone         GeofenceZone?    @relation(fields: [geofenceZoneId], references: [id])
+  createdAt            DateTime         @default(now())
+
+  inspections  VehicleInspection[]
+  availability AvailabilityRule[]
+  bookings     Booking[]
+  claims       Claim[]
+
+  @@index([ownerId])
+  @@index([region, tier, status])
+}
+
+model VehicleInspection {
+  id               String         @id @default(cuid())
+  vehicleId        String
+  vehicle          Vehicle        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  type             InspectionType
+  bookingId        String?
+  booking          Booking?       @relation(fields: [bookingId], references: [id])
+  inspectorId      String?
+  photos           String[]
+  aiConditionScore Float?
+  notes            String?
+  createdAt        DateTime       @default(now())
+
+  @@index([vehicleId])
+  @@index([bookingId])
+}
+
+model AvailabilityRule {
+  id                 String               @id @default(cuid())
+  vehicleId          String
+  vehicle            Vehicle              @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  type               AvailabilityRuleType
+  dayOfWeek          Int?
+  startTime          String?
+  endTime            String?
+  bufferMinutes      Int                  @default(0)
+  calendarSyncSource String?
+  priority           Int                  @default(0)
+
+  @@index([vehicleId])
+}
+
+model GeofenceZone {
+  id       String    @id @default(cuid())
+  region   Region    @default(US)
+  name     String
+  polygon  Json
+  vehicles Vehicle[]
+}
+
+// ----------------------------------------------------------------------------
+// Booking & Handoff (spec §5.3)
+// ----------------------------------------------------------------------------
+
+model Booking {
+  id                  String       @id @default(cuid())
+  vehicleId           String
+  vehicle             Vehicle      @relation(fields: [vehicleId], references: [id])
+  driverId            String
+  driver              User         @relation("DriverBookings", fields: [driverId], references: [id])
+  ownerId             String
+  owner               User         @relation("OwnerBookings", fields: [ownerId], references: [id])
+  region              Region       @default(US)
+  state               BookingState @default(REQUESTED)
+  scheduledStart      DateTime
+  scheduledEnd        DateTime
+  actualStart         DateTime?
+  actualEnd           DateTime?
+  handoffLat          Float?
+  handoffLng          Float?
+  returnLat           Float?
+  returnLng           Float?
+  mileageStart        Int?
+  mileageEnd          Int?
+  fuelStart           Float?
+  fuelEnd             Float?
+  insurancePolicyRef  String?
+  ownerApprovedDriver Boolean      @default(false)
+  createdAt           DateTime     @default(now())
+
+  handoffs         Handoff[]
+  trips            Trip[]
+  inspections      VehicleInspection[]
+  insuranceBinding InsuranceBinding?
+  payouts          Payout[]
+  claims           Claim[]
+  trustEvents      TrustEvent[]
+
+  @@index([vehicleId])
+  @@index([driverId])
+  @@index([ownerId])
+  @@index([state])
+}
+
+model Handoff {
+  id                String      @id @default(cuid())
+  bookingId         String
+  booking           Booking     @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  type              HandoffType
+  confirmedByOwner  Boolean     @default(false)
+  confirmedByDriver Boolean     @default(false)
+  photos            String[]
+  odometer          Int?
+  fuelLevel         Float?
+  geoLat            Float?
+  geoLng            Float?
+  timestamp         DateTime    @default(now())
+
+  @@index([bookingId])
+}
+
+model Trip {
+  id                 String           @id @default(cuid())
+  bookingId          String
+  booking            Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  externalPlatform   ExternalPlatform
+  grossEarningsCents Int
+  currency           String           @default("USD")
+  distanceMiles      Float
+  startedAt          DateTime
+  endedAt            DateTime
+  riderRating        Float?
+
+  payout Payout?
+
+  @@index([bookingId])
+}
+
+// ----------------------------------------------------------------------------
+// Trust Engine (spec §5.4)
+// ----------------------------------------------------------------------------
+
+model TrustEvent {
+  id              String         @id @default(cuid())
+  driverId        String
+  driver          User           @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  type            TrustEventType
+  scoreDelta      Int
+  reason          String
+  bookingId       String?
+  booking         Booking?       @relation(fields: [bookingId], references: [id])
+  isPermanentFlag Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+
+  @@index([driverId])
+  @@index([driverId, isPermanentFlag])
+}
+
+model TrustScoreSnapshot {
+  id                 String    @id @default(cuid())
+  driverId           String
+  driver             User      @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  score              Int
+  tier               TrustTier
+  dimensionBreakdown Json
+  computedAt         DateTime  @default(now())
+
+  @@index([driverId, computedAt])
+}
+
+// ----------------------------------------------------------------------------
+// Payments & Payout (spec §5.5)
+// ----------------------------------------------------------------------------
+
+model Payout {
+  id                 String       @id @default(cuid())
+  bookingId          String
+  booking            Booking      @relation(fields: [bookingId], references: [id])
+  tripId             String       @unique
+  trip               Trip         @relation(fields: [tripId], references: [id])
+  ownerId            String
+  driverId           String
+  grossEarningsCents Int
+  ownerShareCents    Int
+  driverShareCents   Int
+  platformShareCents Int
+  insuranceCostCents Int          @default(0)
+  currency           String       @default("USD")
+  ownerTakeRate      Float
+  driverTakeRate     Float
+  status             PayoutStatus @default(PENDING)
+  stripeTransferIds  String[]
+  createdAt          DateTime     @default(now())
+
+  @@index([bookingId])
+  @@index([ownerId])
+  @@index([driverId])
+  @@index([status])
+}
+
+// ----------------------------------------------------------------------------
+// Insurance & Claims (spec §5.6)
+// ----------------------------------------------------------------------------
+
+model InsuranceProduct {
+  id                        String      @id @default(cuid())
+  region                    Region      @default(US)
+  tier                      VehicleTier
+  providerName              String
+  coverageLimitCents        Int
+  perVehicleWeeklyCostCents Int
+  agreedValueRequired       Boolean     @default(false)
+
+  bindings InsuranceBinding[]
+
+  @@unique([region, tier, providerName])
+}
+
+model InsuranceBinding {
+  id             String           @id @default(cuid())
+  bookingId      String           @unique
+  booking        Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  productId      String
+  product        InsuranceProduct @relation(fields: [productId], references: [id])
+  coverageState  CoverageState    @default(LISTED_GAP)
+  effectiveStart DateTime
+  effectiveEnd   DateTime
+  policyRef      String
+
+  @@index([productId])
+}
+
+model Claim {
+  id                  String      @id @default(cuid())
+  bookingId           String
+  booking             Booking     @relation(fields: [bookingId], references: [id])
+  vehicleId           String
+  vehicle             Vehicle     @relation(fields: [vehicleId], references: [id])
+  reportedBy          String
+  type                ClaimType
+  amountClaimedCents  Int
+  amountApprovedCents Int?
+  status              ClaimStatus @default(OPEN)
+  slaDueAt            DateTime
+  evidence            String[]
+  createdAt           DateTime    @default(now())
+
+  @@index([bookingId])
+  @@index([status, slaDueAt])
+}
+
+// ----------------------------------------------------------------------------
+// Region config & audit (spec §13)
+// ----------------------------------------------------------------------------
+
+model RegulatoryRuleset {
+  id        String   @id @default(cuid())
+  region    Region   @unique
+  active    Boolean  @default(false)
+  config    Json
+  updatedAt DateTime @updatedAt
+}
+
+// Immutable audit log for all financial and trust mutations (spec §13). Append-only by
+// convention — no update/delete code paths are provided.
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}

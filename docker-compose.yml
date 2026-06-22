@@ -1,0 +1,38 @@
+# Local development datastores for UniDriver.
+# Usage: pnpm db:up   (or: docker compose up -d postgres redis)
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: unidriver-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: unidriver
+      POSTGRES_PASSWORD: unidriver
+      POSTGRES_DB: unidriver
+    ports:
+      - "5432:5432"
+    volumes:
+      - unidriver-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U unidriver -d unidriver"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: unidriver-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - unidriver-redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  unidriver-pgdata:
+  unidriver-redisdata:
