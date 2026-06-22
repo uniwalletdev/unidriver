@@ -29,11 +29,23 @@ Acceptance invariants already enforced + tested:
 - Trust-tier vehicle gating is a pure, server-side function the Booking module calls.
 - Every payout records `driverTakeRate`, `ownerTakeRate`, and `insuranceCostCents`.
 
-## Phase 1 — Owner supply MVP (Houston)
+## 🚧 Phase 1 — Owner supply MVP (Houston) — **in progress**
 
 Owner onboarding, vehicle listing + onboarding inspection, Standard/Comfort/EV/XL tiering,
 Smart Calendar core (`AvailabilityRule` engine), Car Note Mode, owner dashboard. Seeds car
 supply first to solve cold start.
+
+Delivered so far (first vertical slice, all layers):
+
+- **Backend:** `POST /api/owners/register`, `POST /api/owners/car-note`, `GET /api/owners/me`,
+  `POST /api/vehicles`, `GET /api/vehicles/mine`, `GET /api/vehicles/:id`,
+  `POST /api/vehicles/:id/activate` (enforces the high-value agreed-value guard).
+- **Frontend (`apps/web`):** Next.js Owner dashboard — register, Car Note Mode (shared logic
+  run client-side), create/list vehicles via the typed API client.
+- **DB:** persisted through the existing `User`/`OwnerProfile`/`Vehicle` Prisma models.
+
+Still to do this phase: vehicle onboarding inspection, Smart Calendar (`AvailabilityRule`)
+engine + calendar sync, the full owner earnings dashboard, and the Expo mobile shell.
 
 ## Phase 2 — Driver side & vetting
 

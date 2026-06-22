@@ -1,19 +1,47 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { Prisma, UserRole, UserStatus } from '@prisma/client';
+import { RegisterOwnerInput } from '@unidriver/shared';
 import { BACKGROUND_CHECK_ADAPTER } from '../../adapters/adapters.constants';
 import {
   BackgroundCheckAdapter,
   BackgroundCheckResult,
 } from '../../adapters/background-check/background-check-adapter.interface';
+import { PrismaService } from '../../common/prisma/prisma.service';
 
 /**
- * Identity & Vetting boundary. Wraps the background-check provider (Checkr in production).
- * Full onboarding flows arrive in Phase 2.
+ * Identity & Vetting boundary. Owns user/owner persistence and wraps the background-check
+ * provider (Checkr in production). Driver onboarding flows arrive in Phase 2.
  */
 @Injectable()
 export class IdentityService {
   constructor(
     @Inject(BACKGROUND_CHECK_ADAPTER) private readonly backgroundCheck: BackgroundCheckAdapter,
+    private readonly prisma: PrismaService,
   ) {}
+
+  /** Register a car owner (Phase 1 onboarding). Creates the User + empty OwnerProfile. */
+  async registerOwner(input: RegisterOwnerInput) {
+    return this.prisma.user.create({
+      data: {
+        role: UserRole.OWNER,
+        status: UserStatus.ACTIVE,
+        fullName: input.fullName,
+        email: input.email,
+        phone: input.phone,
+        // Shared and Prisma enums share string values 1:1 (schema mirrors @unidriver/shared).
+        region: (input.region ?? 'US') as Prisma.UserCreateInput['region'],
+        ownerProfile: { create: {} },
+      },
+      include: { ownerProfile: true },
+    });
+  }
+
+  async getOwner(userId: string) {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { ownerProfile: true },
+    });
+  }
 
   async startBackgroundCheck(userId: string, email: string): Promise<BackgroundCheckResult> {
     const { candidateId } = await this.backgroundCheck.createCandidate({ userId, email });

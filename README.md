@@ -33,6 +33,12 @@ What exists today:
 | Sentry + health checks + CI | ✅ |
 | Adapter interfaces + mocks: Payments / BackgroundCheck / Telematics / Insurance | ✅ |
 
+## In progress — Phase 1: Owner supply MVP 🚧
+
+A first vertical slice is live across all layers: owner registration, **Car Note Mode**, and
+vehicle listing/activation — backend endpoints (`apps/api`), a typed Next.js dashboard
+(`apps/web`), and the Postgres models, all sharing `@unidriver/shared` types end to end.
+
 See [`docs/PHASES.md`](docs/PHASES.md) for the full roadmap and what each later phase adds.
 
 ## Architecture
@@ -43,18 +49,21 @@ into a service later if scale requires it.
 ```
 apps/
   api/                NestJS modular monolith (backend)
-    prisma/           Prisma schema + seed (all domain entities)
+    prisma/           Prisma schema + migration + seed (all domain entities)
     src/
       common/         Prisma, Redis, queue, Sentry, health
       auth/           Pluggable auth provider + guards
       adapters/       Stripe / Checkr / Smartcar / Insurance (interface + mock)
       modules/        identity · vehicle · booking · trust · payments · insurance
+  web/                Next.js (App Router) — Owner dashboard + landing
+    app/              routes (/, /owner)
+    lib/api.ts        typed API client (imports @unidriver/shared)
 packages/
   shared/             TypeScript domain types + pure business logic shared everywhere
 ```
 
-Future workspaces (`apps/mobile` React Native, `apps/web` Next.js) slot into the existing
-`apps/*` glob without restructuring.
+The React Native (`apps/mobile`) workspace slots into the existing `apps/*` glob without
+restructuring when Phase 1 mobile work begins.
 
 ## Getting started
 
@@ -69,6 +78,29 @@ pnpm --filter @unidriver/api dev   # boot the API on http://localhost:4000
 ```
 
 Health check: `GET http://localhost:4000/api/health`.
+
+### Run the web app
+
+```bash
+pnpm --filter @unidriver/web dev    # http://localhost:3000  (Owner dashboard at /owner)
+```
+
+The `/owner` page registers an owner, runs **Car Note Mode** client-side (the same shared
+`computeCarNote` the API uses), and lists/creates vehicles through the API.
+
+### Phase 1 endpoints (Owner vertical slice)
+
+Auth uses a dev bearer token `dev:<userId>:<ROLE>` until Clerk/Auth0 is wired.
+
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| `POST` | `/api/owners/register` | public | Create owner User + OwnerProfile |
+| `POST` | `/api/owners/car-note` | public | Car Note Mode breakeven calc (§10.1) |
+| `GET`  | `/api/owners/me` | OWNER | Current owner + profile |
+| `POST` | `/api/vehicles` | OWNER | List a vehicle |
+| `GET`  | `/api/vehicles/mine` | OWNER | My vehicles |
+| `GET`  | `/api/vehicles/:id` | any | Vehicle by id |
+| `POST` | `/api/vehicles/:id/activate` | OWNER | Activate (enforces agreed-value guard) |
 
 ## Common commands
 

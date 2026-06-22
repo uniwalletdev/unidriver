@@ -10,6 +10,8 @@ export * from './trust';
 export * from './owner';
 export * from './payout';
 export * from './booking';
+export * from './car-note';
+export * from './dto';
 
 export * from './domain/user';
 export * from './domain/vehicle';

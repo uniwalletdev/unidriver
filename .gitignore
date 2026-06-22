@@ -8,6 +8,11 @@ build/
 .turbo/
 *.tsbuildinfo
 
+# next.js
+.next/
+out/
+next-env.d.ts
+
 # prisma generated client
 **/generated/
 .prisma/
