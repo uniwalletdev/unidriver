@@ -39,7 +39,8 @@ A first vertical slice is live across all layers: owner registration, **Car Note
 vehicle listing/activation — backend endpoints (`apps/api`), a typed Next.js dashboard
 (`apps/web`), and the Postgres models, all sharing `@unidriver/shared` types end to end.
 
-See [`docs/PHASES.md`](docs/PHASES.md) for the full roadmap and what each later phase adds.
+See [`docs/PHASES.md`](docs/PHASES.md) for the full roadmap, and
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) to deploy the API on Railway and the web on Vercel.
 
 ## Architecture
 

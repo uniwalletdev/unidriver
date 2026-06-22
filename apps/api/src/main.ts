@@ -21,14 +21,16 @@ async function bootstrap(): Promise<void> {
 
   const app = await NestFactory.create(AppModule, { bufferLogs: false });
   app.setGlobalPrefix('api');
-  app.enableCors();
+  // Reflect any origin when CORS_ORIGINS is unset; restrict to the listed origins otherwise.
+  app.enableCors({ origin: config.cors.origins ?? true });
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }),
   );
   app.enableShutdownHooks();
 
-  await app.listen(config.port);
-  logger.log(`UniDriver API listening on http://localhost:${config.port}/api (${config.env})`);
+  // Bind 0.0.0.0 so the app is reachable inside a container (Railway, Docker, etc.).
+  await app.listen(config.port, '0.0.0.0');
+  logger.log(`UniDriver API listening on port ${config.port} at /api (${config.env})`);
   logger.log(`Adapter mode: ${config.adapterMode} · region: ${config.defaultRegion}`);
 }
 

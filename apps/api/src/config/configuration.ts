@@ -15,6 +15,8 @@ export interface AppConfig {
     jwksUrl?: string;
   };
   sentry: { dsn?: string; tracesSampleRate: number };
+  /** Allowed CORS origins. Undefined => reflect any origin (fine with Bearer-token auth). */
+  cors: { origins?: string[] };
   /** In Phase 0 every external integration runs in "mock" mode (spec §14). */
   adapterMode: AdapterMode;
 }
@@ -48,8 +50,20 @@ export function loadConfig(): AppConfig {
       dsn: process.env.SENTRY_DSN || undefined,
       tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE ?? 0.1),
     },
+    cors: { origins: parseOrigins(process.env.CORS_ORIGINS) },
     adapterMode: (process.env.ADAPTER_MODE as AdapterMode) ?? 'mock',
   };
+}
+
+function parseOrigins(value: string | undefined): string[] | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const origins = value
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+  return origins.length > 0 ? origins : undefined;
 }
 
 /** ConfigModule factory. */
