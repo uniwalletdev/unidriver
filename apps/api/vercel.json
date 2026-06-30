@@ -1,0 +1,5 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "comment": "The UniDriver API is a long-running NestJS server (main.ts calls app.listen) and is deployed on Railway via the repo-root Dockerfile — NOT on Vercel's serverless runtime, which expects an exported handler. This config makes any accidental Vercel deploy of apps/api fail fast with a clear message instead of producing a broken function that 500s on every request.",
+  "buildCommand": "echo 'apps/api (NestJS) is deployed on Railway, not Vercel. Remove this project from Vercel — see apps/api/vercel.json.' && exit 1"
+}
