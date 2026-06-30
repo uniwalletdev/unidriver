@@ -10,9 +10,21 @@ export class RedisService implements OnModuleDestroy {
     return this.client;
   }
 
-  async ping(): Promise<boolean> {
+  /**
+   * Liveness probe used by the health check. Races the ping against a short timeout so a
+   * misconfigured or unreachable Redis reports `down` promptly instead of hanging the
+   * request forever (ioredis queues commands while offline, so a bare ping never resolves
+   * when the server is unreachable).
+   */
+  async ping(timeoutMs = 1000): Promise<boolean> {
     try {
-      return (await this.client.ping()) === 'PONG';
+      const result = await Promise.race([
+        this.client.ping(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('redis ping timeout')), timeoutMs),
+        ),
+      ]);
+      return result === 'PONG';
     } catch {
       return false;
     }
