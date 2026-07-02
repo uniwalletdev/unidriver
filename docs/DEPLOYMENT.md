@@ -28,6 +28,9 @@ and `apps/web/vercel.json` for the web. The API binds `0.0.0.0`, reads `PORT`, a
    - `DATABASE_URL` = `${{Postgres.DATABASE_URL}}`  (reference the Postgres service)
    - `REDIS_URL` = `${{Redis.REDIS_URL}}`  *(only if you added Redis)*
    - `NODE_ENV` = `production`
+   - `ALLOW_MOCK_AUTH` = `true`  *(required while auth is the Phase 0 mock — the API
+     refuses to boot with mock auth in production without this explicit opt-in, because
+     dev bearer tokens grant any role; remove it once Clerk/Auth0 is wired)*
    - `CORS_ORIGINS` = your Vercel URL, e.g. `https://unidriver.vercel.app`
    - `ADAPTER_MODE` = `mock`  *(until real Stripe/Checkr/Smartcar keys are added)*
    - *(optional)* `SENTRY_DSN`
@@ -60,6 +63,8 @@ preview deployments (which get unique URLs), either add them to `CORS_ORIGINS` o
 
 - **Migrations** run automatically on every API start (`prisma migrate deploy`, idempotent).
   New schema changes ship by committing a new migration under `apps/api/prisma/migrations`.
-- **Auth** is still the Phase 0 mock (`dev:<userId>:<ROLE>` bearer tokens). Swap in Clerk/Auth0
-  by implementing `AuthProvider` and binding it in `AuthModule` before a real launch.
+- **Auth** is still the Phase 0 mock (`dev:<userId>:<ROLE>` bearer tokens), which is why the
+  production boot requires the explicit `ALLOW_MOCK_AUTH=true` opt-in above. Swap in
+  Clerk/Auth0 by implementing `AuthProvider` and binding it in `AuthModule` before a real
+  launch, then remove `ALLOW_MOCK_AUTH`.
 - **Mobile** (`apps/mobile`, Expo) deploys via EAS later; it will point at the same Railway API.

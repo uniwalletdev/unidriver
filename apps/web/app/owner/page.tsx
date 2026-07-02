@@ -66,8 +66,11 @@ export default function OwnerDashboard() {
 
   // Car Note Mode (runs the shared pure function client-side) ----------------
   const [monthlyPayment, setMonthlyPayment] = useState(500);
+  // computeCarNote throws on negative/non-finite cents, so sanitise free-form input first.
   const carNote: CarNoteResult = computeCarNote({
-    monthlyPaymentCents: Math.round(monthlyPayment * 100),
+    monthlyPaymentCents: Number.isFinite(monthlyPayment)
+      ? Math.max(0, Math.round(monthlyPayment * 100))
+      : 0,
   });
 
   // Vehicle listing ---------------------------------------------------------

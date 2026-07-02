@@ -10,6 +10,8 @@ export interface AppConfig {
   redis: { url: string };
   auth: {
     provider: string;
+    /** Explicit opt-in to boot the mock provider with NODE_ENV=production (staging only). */
+    allowMockInProduction: boolean;
     issuer?: string;
     audience?: string;
     jwksUrl?: string;
@@ -42,6 +44,7 @@ export function loadConfig(): AppConfig {
     },
     auth: {
       provider: process.env.AUTH_PROVIDER ?? 'mock',
+      allowMockInProduction: process.env.ALLOW_MOCK_AUTH === 'true',
       issuer: process.env.AUTH_JWT_ISSUER || undefined,
       audience: process.env.AUTH_JWT_AUDIENCE || undefined,
       jwksUrl: process.env.AUTH_JWKS_URL || undefined,
