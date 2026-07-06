@@ -2,13 +2,14 @@ import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AUTH_PROVIDER } from './auth.constants';
 import { AuthProvider } from './auth-provider.interface';
+import { ClerkAuthProvider } from './clerk-auth.provider';
 import { MockAuthProvider } from './mock-auth.provider';
 import { AuthGuard } from './auth.guard';
 import { RolesGuard } from './roles.guard';
 
 /**
  * Provides the active auth provider behind the {@link AUTH_PROVIDER} token, selected by
- * `AUTH_PROVIDER` (config `auth.provider`). Only the mock exists until Clerk/Auth0 lands.
+ * `AUTH_PROVIDER` env: `mock` (default, dev tokens) or `clerk` (Clerk session JWTs).
  *
  * Mock tokens (`dev:<userId>:<ROLE>`) grant any role to anyone who can reach the API, so a
  * production boot with the mock is refused unless ALLOW_MOCK_AUTH=true is set explicitly
@@ -18,15 +19,22 @@ import { RolesGuard } from './roles.guard';
 @Module({
   providers: [
     MockAuthProvider,
+    ClerkAuthProvider,
     {
       provide: AUTH_PROVIDER,
-      inject: [ConfigService, MockAuthProvider],
-      useFactory: (config: ConfigService, mock: MockAuthProvider): AuthProvider => {
+      inject: [ConfigService, MockAuthProvider, ClerkAuthProvider],
+      useFactory: (
+        config: ConfigService,
+        mock: MockAuthProvider,
+        clerk: ClerkAuthProvider,
+      ): AuthProvider => {
         const provider = config.get<string>('auth.provider') ?? 'mock';
+        if (provider === 'clerk') {
+          clerk.assertConfigured();
+          return clerk;
+        }
         if (provider !== 'mock') {
-          throw new Error(
-            `AUTH_PROVIDER="${provider}" is not implemented yet — only "mock" is available in this phase`,
-          );
+          throw new Error(`Unsupported AUTH_PROVIDER "${provider}" (expected "mock" or "clerk")`);
         }
         if (
           config.get<string>('env') === 'production' &&
@@ -34,8 +42,8 @@ import { RolesGuard } from './roles.guard';
         ) {
           throw new Error(
             'Refusing to start with mock auth in production: dev bearer tokens grant any role ' +
-              '(including ADMIN) to anyone. Set ALLOW_MOCK_AUTH=true only for a protected ' +
-              'staging/pilot environment, or wire a real AuthProvider.',
+              '(including ADMIN) to anyone. Set AUTH_PROVIDER=clerk for real auth, or set ' +
+              'ALLOW_MOCK_AUTH=true only for a protected staging/pilot environment.',
           );
         }
         return mock;

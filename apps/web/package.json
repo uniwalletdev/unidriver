@@ -10,6 +10,7 @@
     "lint": "echo \"(web lint runs as part of next build)\""
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.20.0",
     "@unidriver/shared": "workspace:*",
     "next": "^14.2.18",
     "react": "^18.3.1",

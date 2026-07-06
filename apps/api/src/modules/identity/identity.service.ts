@@ -19,8 +19,21 @@ export class IdentityService {
     private readonly prisma: PrismaService,
   ) {}
 
-  /** Register a car owner (Phase 1 onboarding). Creates the User + empty OwnerProfile. */
-  async registerOwner(input: RegisterOwnerInput) {
+  /**
+   * Register a car owner (Phase 1 onboarding). Creates the User + empty OwnerProfile.
+   * `authProviderId` is the verified external IdP subject (Clerk user id) when auth is not
+   * the mock; re-registering from the same login returns the already-linked account.
+   */
+  async registerOwner(input: RegisterOwnerInput, authProviderId?: string) {
+    if (authProviderId) {
+      const existing = await this.prisma.user.findUnique({
+        where: { authProviderId },
+        include: { ownerProfile: true },
+      });
+      if (existing) {
+        return existing;
+      }
+    }
     try {
       return await this.prisma.user.create({
         data: {
@@ -31,6 +44,7 @@ export class IdentityService {
           phone: input.phone,
           // Shared and Prisma enums share string values 1:1 (schema mirrors @unidriver/shared).
           region: (input.region ?? 'US') as Prisma.UserCreateInput['region'],
+          authProviderId,
           ownerProfile: { create: {} },
         },
         include: { ownerProfile: true },
