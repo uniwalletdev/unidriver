@@ -59,6 +59,34 @@ After both are live, make sure `CORS_ORIGINS` on Railway includes the exact Verc
 preview deployments (which get unique URLs), either add them to `CORS_ORIGINS` or leave
 `CORS_ORIGINS` unset to reflect any origin (safe here because auth is Bearer-token, not cookies).
 
+## Troubleshooting
+
+### Vercel 500s with `No exports found in module ".../apps/api/src/main.js"`
+
+A Vercel project (e.g. one named `unidriver-api`) is pointed at this repo and is deploying the
+**API** to Vercel's serverless runtime. That can never work: `apps/api` is a long-running NestJS
+server — `main.ts` calls `app.listen()` and exports nothing, while Vercel's Node runtime requires
+the entry module to export a handler or a server. The function boots Nest, Vercel finds no
+export, and every request 500s.
+
+**Fix: delete that Vercel project.** The API deploys to Railway (section 1); the only Vercel
+project should be the web app with **Root Directory = `apps/web`** (section 2). Guard
+`vercel.json` files at the repo root and in `apps/api` now fail such deploys at build time with
+a pointer here — but only on branches that contain them, so stale branches can still exhibit
+the runtime failure.
+
+### Clerk keys are set but authentication doesn't work
+
+Setting `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY` (on Vercel, Railway, or
+anywhere else) has **no effect today** — no code in the repo reads them. Auth is still the
+Phase 0 mock provider (`AuthModule` binds `MockAuthProvider`; the `AUTH_PROVIDER` env var is
+parsed into config but not yet consulted), and the web app does not include `@clerk/nextjs`.
+Until Clerk is actually integrated, authenticate with dev bearer tokens: `dev:<userId>:<ROLE>`,
+e.g. `dev:usr_123:OWNER`. Integrating Clerk means: add Clerk to `apps/web` (provider,
+middleware, sign-in UI), implement a Clerk `AuthProvider` in `apps/api` that verifies session
+JWTs via Clerk's JWKS, bind it in `AuthModule` when `AUTH_PROVIDER=clerk`, and link Clerk user
+ids to the `User` records created at registration.
+
 ## Notes
 
 - **Migrations** run automatically on every API start (`prisma migrate deploy`, idempotent).
