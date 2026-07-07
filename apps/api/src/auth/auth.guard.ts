@@ -27,7 +27,7 @@ export class AuthGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<RequestWithUser>();
-    const token = this.extractToken(request);
+    const token = extractBearerToken(request);
     if (!token) {
       throw new UnauthorizedException('Missing bearer token');
     }
@@ -35,13 +35,14 @@ export class AuthGuard implements CanActivate {
     request.user = await this.authProvider.verifyToken(token);
     return true;
   }
+}
 
-  private extractToken(request: RequestWithUser): string | undefined {
-    const header = request.headers.authorization;
-    if (!header) {
-      return undefined;
-    }
-    const [type, value] = header.split(' ');
-    return type === 'Bearer' ? value : undefined;
+/** Pulls the value out of an `Authorization: Bearer <token>` header, if any. */
+export function extractBearerToken(request: RequestWithUser): string | undefined {
+  const header = request.headers.authorization;
+  if (!header) {
+    return undefined;
   }
+  const [type, value] = header.split(' ');
+  return type === 'Bearer' ? value : undefined;
 }

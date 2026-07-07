@@ -198,6 +198,8 @@ model User {
   fullName  String
   region    Region     @default(US)
   status    UserStatus @default(PENDING)
+  /// External IdP subject (e.g. Clerk user id) linked at registration. Null for mock-auth users.
+  authProviderId String? @unique
   createdAt DateTime   @default(now())
 
   driverProfile  DriverProfile?

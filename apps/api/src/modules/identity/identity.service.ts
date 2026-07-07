@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { ConflictException, Inject, Injectable } from '@nestjs/common';
 import { Prisma, UserRole, UserStatus } from '@prisma/client';
 import { RegisterOwnerInput } from '@unidriver/shared';
 import { BACKGROUND_CHECK_ADAPTER } from '../../adapters/adapters.constants';
@@ -19,21 +19,42 @@ export class IdentityService {
     private readonly prisma: PrismaService,
   ) {}
 
-  /** Register a car owner (Phase 1 onboarding). Creates the User + empty OwnerProfile. */
-  async registerOwner(input: RegisterOwnerInput) {
-    return this.prisma.user.create({
-      data: {
-        role: UserRole.OWNER,
-        status: UserStatus.ACTIVE,
-        fullName: input.fullName,
-        email: input.email,
-        phone: input.phone,
-        // Shared and Prisma enums share string values 1:1 (schema mirrors @unidriver/shared).
-        region: (input.region ?? 'US') as Prisma.UserCreateInput['region'],
-        ownerProfile: { create: {} },
-      },
-      include: { ownerProfile: true },
-    });
+  /**
+   * Register a car owner (Phase 1 onboarding). Creates the User + empty OwnerProfile.
+   * `authProviderId` is the verified external IdP subject (Clerk user id) when auth is not
+   * the mock; re-registering from the same login returns the already-linked account.
+   */
+  async registerOwner(input: RegisterOwnerInput, authProviderId?: string) {
+    if (authProviderId) {
+      const existing = await this.prisma.user.findUnique({
+        where: { authProviderId },
+        include: { ownerProfile: true },
+      });
+      if (existing) {
+        return existing;
+      }
+    }
+    try {
+      return await this.prisma.user.create({
+        data: {
+          role: UserRole.OWNER,
+          status: UserStatus.ACTIVE,
+          fullName: input.fullName,
+          email: input.email,
+          phone: input.phone,
+          // Shared and Prisma enums share string values 1:1 (schema mirrors @unidriver/shared).
+          region: (input.region ?? 'US') as Prisma.UserCreateInput['region'],
+          authProviderId,
+          ownerProfile: { create: {} },
+        },
+        include: { ownerProfile: true },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('An account with this email or phone already exists');
+      }
+      throw error;
+    }
   }
 
   async getOwner(userId: string) {

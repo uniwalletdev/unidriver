@@ -23,16 +23,29 @@ async function asJson<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export async function registerOwner(input: {
-  fullName: string;
-  email: string;
-  phone: string;
-}): Promise<RegisteredOwner> {
+/**
+ * Register an owner. `token` is required when the API runs real auth (Clerk): the backend
+ * verifies it and links its subject to the new account. Omitted in mock/dev mode.
+ */
+export async function registerOwner(
+  input: {
+    fullName: string;
+    email: string;
+    phone: string;
+  },
+  token?: string,
+): Promise<RegisteredOwner> {
   const res = await fetch(`${API_URL}/api/owners/register`, {
     method: 'POST',
-    headers: jsonHeaders(),
+    headers: jsonHeaders(token),
     body: JSON.stringify(input),
   });
+  return asJson<RegisteredOwner>(res);
+}
+
+/** Fetch the owner account linked to the token, or throw (404/401) when not registered. */
+export async function getMyOwner(token: string): Promise<RegisteredOwner> {
+  const res = await fetch(`${API_URL}/api/owners/me`, { headers: jsonHeaders(token) });
   return asJson<RegisteredOwner>(res);
 }
 

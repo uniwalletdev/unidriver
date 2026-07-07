@@ -1,5 +1,7 @@
+import { ClerkProvider } from '@clerk/nextjs';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { clerkEnabled, clerkPublishableKey } from '../lib/clerk';
 
 export const metadata: Metadata = {
   title: 'UniDriver',
@@ -7,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  return (
+  const page = (
     <html lang="en">
       <body
         style={{
@@ -20,5 +22,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <main style={{ maxWidth: 880, margin: '0 auto', padding: '32px 20px' }}>{children}</main>
       </body>
     </html>
+  );
+
+  return clerkEnabled ? (
+    <ClerkProvider publishableKey={clerkPublishableKey}>{page}</ClerkProvider>
+  ) : (
+    page
   );
 }

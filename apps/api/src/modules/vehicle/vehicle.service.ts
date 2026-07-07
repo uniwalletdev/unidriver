@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Inject,
   Injectable,
@@ -70,7 +71,14 @@ export class VehicleService {
       allowedTripTypes: (input.allowedTripTypes ??
         undefined) as unknown as Prisma.VehicleUncheckedCreateInput['allowedTripTypes'],
     };
-    return this.prisma.vehicle.create({ data });
+    try {
+      return await this.prisma.vehicle.create({ data });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('A vehicle with this VIN is already listed');
+      }
+      throw error;
+    }
   }
 
   async listForOwner(ownerId: string) {

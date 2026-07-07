@@ -20,18 +20,18 @@ zero external credentials.
 
 What exists today:
 
-| Area | Status |
-|---|---|
-| pnpm + Turborepo monorepo | ✅ |
-| `packages/shared` domain types, enums, money utilities | ✅ |
-| Trust-tier rates, thresholds & vehicle-tier gating (pure, tested) | ✅ |
-| Payout engine (revenue-share split, integer-cent safe, tested) | ✅ |
-| NestJS skeleton — Identity, Vehicle, Booking, Trust, Payments, Insurance modules | ✅ |
-| Prisma schema for every Section 5 entity | ✅ |
-| Postgres + Redis (docker-compose) + BullMQ queue wiring | ✅ |
-| Auth scaffolding (pluggable provider, mock for dev) | ✅ |
-| Sentry + health checks + CI | ✅ |
-| Adapter interfaces + mocks: Payments / BackgroundCheck / Telematics / Insurance | ✅ |
+| Area                                                                             | Status |
+| -------------------------------------------------------------------------------- | ------ |
+| pnpm + Turborepo monorepo                                                        | ✅     |
+| `packages/shared` domain types, enums, money utilities                           | ✅     |
+| Trust-tier rates, thresholds & vehicle-tier gating (pure, tested)                | ✅     |
+| Payout engine (revenue-share split, integer-cent safe, tested)                   | ✅     |
+| NestJS skeleton — Identity, Vehicle, Booking, Trust, Payments, Insurance modules | ✅     |
+| Prisma schema for every Section 5 entity                                         | ✅     |
+| Postgres + Redis (docker-compose) + BullMQ queue wiring                          | ✅     |
+| Auth scaffolding (pluggable provider, mock for dev)                              | ✅     |
+| Sentry + health checks + CI                                                      | ✅     |
+| Adapter interfaces + mocks: Payments / BackgroundCheck / Telematics / Insurance  | ✅     |
 
 ## In progress — Phase 1: Owner supply MVP 🚧
 
@@ -91,17 +91,17 @@ The `/owner` page registers an owner, runs **Car Note Mode** client-side (the sa
 
 ### Phase 1 endpoints (Owner vertical slice)
 
-Auth uses a dev bearer token `dev:<userId>:<ROLE>` until Clerk/Auth0 is wired.
+Auth uses a dev bearer token `dev:<userId>:<ROLE>` by default; set `AUTH_PROVIDER=clerk` (+ `AUTH_JWT_ISSUER`) to verify Clerk session JWTs instead — see docs/DEPLOYMENT.md §3.
 
-| Method | Path | Auth | Purpose |
-|---|---|---|---|
-| `POST` | `/api/owners/register` | public | Create owner User + OwnerProfile |
-| `POST` | `/api/owners/car-note` | public | Car Note Mode breakeven calc (§10.1) |
-| `GET`  | `/api/owners/me` | OWNER | Current owner + profile |
-| `POST` | `/api/vehicles` | OWNER | List a vehicle |
-| `GET`  | `/api/vehicles/mine` | OWNER | My vehicles |
-| `GET`  | `/api/vehicles/:id` | any | Vehicle by id |
-| `POST` | `/api/vehicles/:id/activate` | OWNER | Activate (enforces agreed-value guard) |
+| Method | Path                         | Auth   | Purpose                                |
+| ------ | ---------------------------- | ------ | -------------------------------------- |
+| `POST` | `/api/owners/register`       | public | Create owner User + OwnerProfile       |
+| `POST` | `/api/owners/car-note`       | public | Car Note Mode breakeven calc (§10.1)   |
+| `GET`  | `/api/owners/me`             | OWNER  | Current owner + profile                |
+| `POST` | `/api/vehicles`              | OWNER  | List a vehicle                         |
+| `GET`  | `/api/vehicles/mine`         | OWNER  | My vehicles                            |
+| `GET`  | `/api/vehicles/:id`          | any    | Vehicle by id                          |
+| `POST` | `/api/vehicles/:id/activate` | OWNER  | Activate (enforces agreed-value guard) |
 
 ## Common commands
 

@@ -1,0 +1,4 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "echo 'Misconfigured Vercel project: nothing deploys from this repo root. The NestJS API (apps/api) runs on Railway via the root Dockerfile — delete any Vercel project pointing at it. The web app deploys from a Vercel project with Root Directory set to apps/web. See docs/DEPLOYMENT.md.' && exit 1"
+}
