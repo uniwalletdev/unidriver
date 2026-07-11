@@ -1,4 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "echo 'apps/api is a long-running NestJS server (main.ts calls app.listen, exports nothing) and is deployed on Railway via the repo-root Dockerfile — not on Vercel, whose serverless runtime needs an exported handler. Remove this project from Vercel. See docs/DEPLOYMENT.md.' && exit 1"
+  "buildCommand": "echo 'apps/api is a long-running NestJS server, not a Vercel serverless handler. It deploys on Railway via the root Dockerfile. Remove this Vercel project. See docs/DEPLOYMENT.md.' && exit 1"
 }
