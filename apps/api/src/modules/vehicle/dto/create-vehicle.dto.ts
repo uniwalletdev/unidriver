@@ -1,11 +1,4 @@
-import {
-  IsEnum,
-  IsInt,
-  IsOptional,
-  IsString,
-  Min,
-  MinLength,
-} from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Min, MinLength } from 'class-validator';
 import {
   AllowedTripType,
   CreateVehicleInput,
@@ -27,8 +20,9 @@ export class CreateVehicleDto implements CreateVehicleInput {
   @Min(1900)
   year: number;
 
+  /** Format + model-year eligibility are checked by the shared rules in VehicleService. */
   @IsString()
-  @MinLength(11)
+  @MinLength(17)
   vin: string;
 
   @IsString()

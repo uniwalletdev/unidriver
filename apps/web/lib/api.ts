@@ -16,11 +16,42 @@ function jsonHeaders(token?: string): HeadersInit {
   return headers;
 }
 
+/** An API failure carrying the server's human-readable message (Nest error body). */
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
 async function asJson<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    throw new Error(`${res.status} ${res.statusText}: ${await res.text()}`);
+    const body = await res.text();
+    let message = body || res.statusText;
+    try {
+      const parsed = JSON.parse(body) as { message?: string | string[] };
+      if (parsed.message) {
+        message = Array.isArray(parsed.message) ? parsed.message.join('\n') : parsed.message;
+      }
+    } catch {
+      // Non-JSON body (proxy error page etc.) — keep the raw text.
+    }
+    throw new ApiError(res.status, message);
   }
   return res.json() as Promise<T>;
+}
+
+/** Turn anything thrown by the client (API or network) into a message fit for the UI. */
+export function errorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    return error.message;
+  }
+  if (error instanceof TypeError) {
+    return `Can't reach the UniDriver API at ${API_URL}. Check your connection and try again.`;
+  }
+  return error instanceof Error ? error.message : String(error);
 }
 
 /**
@@ -59,6 +90,14 @@ export async function createVehicle(token: string, input: CreateVehicleInput): P
     method: 'POST',
     headers: jsonHeaders(token),
     body: JSON.stringify(input),
+  });
+  return asJson<Vehicle>(res);
+}
+
+export async function activateVehicle(token: string, id: string): Promise<Vehicle> {
+  const res = await fetch(`${API_URL}/api/vehicles/${encodeURIComponent(id)}/activate`, {
+    method: 'POST',
+    headers: jsonHeaders(token),
   });
   return asJson<Vehicle>(res);
 }

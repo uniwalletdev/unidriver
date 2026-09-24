@@ -1,25 +1,45 @@
 import { ClerkProvider } from '@clerk/nextjs';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
+import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { clerkEnabled, clerkPublishableKey } from '../lib/clerk';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'UniDriver',
-  description: 'A three-sided mobility marketplace — Owners, Drivers, Riders.',
+  title: { default: 'UniDriver', template: '%s · UniDriver' },
+  description: 'Earn from your idle car. UniDriver only earns a share when your car does.',
+  // "Add to Home Screen" on iOS opens full-screen, like a native app.
+  appleWebApp: { capable: true, title: 'UniDriver', statusBarStyle: 'default' },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  // Lets the layout extend under the notch / home indicator; safe-area insets pad it back.
+  viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f5f6fa' },
+    { media: '(prefers-color-scheme: dark)', color: '#0b1120' },
+  ],
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   const page = (
     <html lang="en">
-      <body
-        style={{
-          fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
-          margin: 0,
-          background: '#0b1120',
-          color: '#e2e8f0',
-        }}
-      >
-        <main style={{ maxWidth: 880, margin: '0 auto', padding: '32px 20px' }}>{children}</main>
+      <body>
+        <header className="topbar">
+          <Link href="/" className="wordmark">
+            <span className="wordmark-mark" aria-hidden>
+              U
+            </span>
+            UniDriver
+          </Link>
+          <Link href="/owner" className="btn btn-sm btn-secondary">
+            Owner dashboard
+          </Link>
+        </header>
+        <main className="container">{children}</main>
       </body>
     </html>
   );

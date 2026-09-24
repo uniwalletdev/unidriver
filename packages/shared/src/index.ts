@@ -11,6 +11,7 @@ export * from './owner';
 export * from './payout';
 export * from './booking';
 export * from './car-note';
+export * from './vehicle';
 export * from './dto';
 
 export * from './domain/user';

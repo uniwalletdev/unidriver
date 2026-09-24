@@ -23,8 +23,8 @@ export class VehicleController {
   }
 
   @Get(':id')
-  get(@Param('id') id: string) {
-    return this.vehicles.get(id);
+  get(@CurrentUser() user: AuthClaims, @Param('id') id: string) {
+    return this.vehicles.get(id, user);
   }
 
   @Roles(UserRole.OWNER)

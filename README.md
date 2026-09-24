@@ -41,6 +41,7 @@ vehicle listing/activation — backend endpoints (`apps/api`), a typed Next.js d
 
 See [`docs/PHASES.md`](docs/PHASES.md) for the full roadmap, and
 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) to deploy the API on Railway and the web on Vercel.
+The mobile / iOS design system and native-app plan are in [`docs/MOBILE_DESIGN.md`](docs/MOBILE_DESIGN.md).
 
 ## Architecture
 
@@ -93,15 +94,15 @@ The `/owner` page registers an owner, runs **Car Note Mode** client-side (the sa
 
 Auth uses a dev bearer token `dev:<userId>:<ROLE>` by default; set `AUTH_PROVIDER=clerk` (+ `AUTH_JWT_ISSUER`) to verify Clerk session JWTs instead — see docs/DEPLOYMENT.md §3.
 
-| Method | Path                         | Auth   | Purpose                                |
-| ------ | ---------------------------- | ------ | -------------------------------------- |
-| `POST` | `/api/owners/register`       | public | Create owner User + OwnerProfile       |
-| `POST` | `/api/owners/car-note`       | public | Car Note Mode breakeven calc (§10.1)   |
-| `GET`  | `/api/owners/me`             | OWNER  | Current owner + profile                |
-| `POST` | `/api/vehicles`              | OWNER  | List a vehicle                         |
-| `GET`  | `/api/vehicles/mine`         | OWNER  | My vehicles                            |
-| `GET`  | `/api/vehicles/:id`          | any    | Vehicle by id                          |
-| `POST` | `/api/vehicles/:id/activate` | OWNER  | Activate (enforces agreed-value guard) |
+| Method | Path                         | Auth                           | Purpose                                     |
+| ------ | ---------------------------- | ------------------------------ | ------------------------------------------- |
+| `POST` | `/api/owners/register`       | public                         | Create owner User + OwnerProfile            |
+| `POST` | `/api/owners/car-note`       | public                         | Car Note Mode breakeven calc (§10.1)        |
+| `GET`  | `/api/owners/me`             | OWNER                          | Current owner + profile                     |
+| `POST` | `/api/vehicles`              | OWNER                          | List a vehicle (VIN + model year validated) |
+| `GET`  | `/api/vehicles/mine`         | OWNER                          | My vehicles                                 |
+| `GET`  | `/api/vehicles/:id`          | owner of the vehicle, or ADMIN | Vehicle by id (404 for anyone else)         |
+| `POST` | `/api/vehicles/:id/activate` | OWNER                          | Activate (enforces agreed-value guard)      |
 
 ## Common commands
 

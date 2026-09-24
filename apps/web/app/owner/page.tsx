@@ -2,7 +2,7 @@
 
 import { SignedIn, SignedOut, SignInButton, UserButton, useAuth, useUser } from '@clerk/nextjs';
 import { clerkEnabled } from '../../lib/clerk';
-import { button, OwnerDashboard } from './owner-dashboard';
+import { OwnerDashboard } from './owner-dashboard';
 
 /**
  * With Clerk configured (NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY set) the page gates on sign-in and
@@ -20,19 +20,21 @@ function ClerkOwnerPage() {
   return (
     <>
       <SignedOut>
-        <h1 style={{ fontSize: 32 }}>Owner dashboard</h1>
-        <p style={{ color: '#94a3b8' }}>Sign in to register as an owner and manage your fleet.</p>
+        <h1 className="large-title">Your garage</h1>
+        <p className="subtle" style={{ marginBottom: 20 }}>
+          Sign in to register as an owner and manage your cars.
+        </p>
         <SignInButton mode="modal">
-          <button style={button}>Sign in</button>
+          <button className="btn btn-block">Sign in</button>
         </SignInButton>
       </SignedOut>
       <SignedIn>
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', minHeight: 44 }}>
           <UserButton />
         </div>
         <OwnerDashboard
           mode="clerk"
-          getToken={() => getToken()}
+          getToken={getToken}
           prefill={{
             fullName: user?.fullName ?? undefined,
             email: user?.primaryEmailAddress?.emailAddress ?? undefined,
