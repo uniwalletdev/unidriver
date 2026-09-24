@@ -4,10 +4,11 @@ UniDriver's owner experience runs on two surfaces that share one look and one se
 rules (`@unidriver/shared`):
 
 1. **Web (`apps/web`)**: mobile-first and installable to the iOS/Android home screen (PWA).
-2. **Native iOS app (`apps/mobile`, next)**: Expo + Expo Router + Clerk Expo.
+2. **Native iOS and Android apps (`apps/mobile`, next)**: one Expo codebase (Expo Router +
+   Clerk Expo) that uses each platform's own patterns.
 
-The visual design for the native app (five key screens, tokens, navigation) is in the published
-design spec. This file is the source of truth for tokens and conventions in the repo.
+The visual designs for the native app (five key screens per platform, tokens, navigation) are in
+the published iOS and Android design specs. This file is the source of truth for tokens and conventions in the repo.
 
 ## Design tokens
 
@@ -62,3 +63,39 @@ for inspection photos, Expo Notifications for booking and payout events, and lig
 
 The `apps/*` workspace glob already picks up `apps/mobile`. Metro needs `watchFolders` pointed at
 the repo root so it resolves `@unidriver/shared`.
+
+## Android (Material 3)
+
+The screens, flows and brand are the same as on iOS. Only the patterns below change, switched with
+`Platform.OS` inside shared components (React Native Paper supplies the Material 3 parts).
+
+| Element              | iOS                        | Android                                   |
+| -------------------- | -------------------------- | ----------------------------------------- |
+| Primary "add" action | "+ Add" in the nav bar     | Extended floating action button           |
+| Tabs                 | Tab bar                    | Navigation bar with pill active indicator |
+| Create flow          | Modal sheet, Cancel / Save | Full-screen dialog, close / Save          |
+| Text fields          | Filled, label above        | Outlined, floating label, support text    |
+| Tier picker          | Pill buttons               | Filter chips                              |
+| Confirmation         | Inline banner + haptic     | Snackbar with Undo                        |
+| Back                 | Edge swipe                 | System back gesture (predictive back)     |
+| Sign-in              | Sign in with Apple + email | Google via Credential Manager + email     |
+| Minimum tap target   | 44pt                       | 48dp                                      |
+
+Material 3 colour roles are generated from the brand indigo. Material You (colours taken from the
+wallpaper) stays off so the brand looks the same on every phone.
+
+| Role               | Light     | Dark      |
+| ------------------ | --------- | --------- |
+| primary            | `#4F46E5` | `#C3C0FF` |
+| primaryContainer   | `#E2DFFF` | `#3F38C8` |
+| secondaryContainer | `#E3E0F9` | `#46455C` |
+| success (custom)   | `#006C4C` | `#9AD6B8` |
+| surface            | `#FCF8FF` | `#131318` |
+| outline            | `#787585` | `#928F9F` |
+
+Android requirements: apps targeting Android 15 are drawn edge-to-edge, so pad with safe-area
+insets. Handle the system back gesture on every screen. Android 13+ asks for notification
+permission at runtime, so ask after the first car is listed. Use the Photo Picker (no storage
+permission) and `android_ripple` on pressables. Ship an `.aab` through EAS Build, starting on the
+Play internal testing track, and fill in the Play Data safety form (name, email, phone, VIN,
+photos, approximate location).
