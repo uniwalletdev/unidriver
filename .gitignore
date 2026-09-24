@@ -35,3 +35,6 @@ pnpm-debug.log*
 
 # coverage
 coverage/
+
+# Redis snapshots from local runs
+dump.rdb
