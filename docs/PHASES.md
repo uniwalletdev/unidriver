@@ -15,9 +15,9 @@ The scaffolding everything else stands on.
 - **`apps/api`:** NestJS modular monolith with six clean module boundaries (Identity, Vehicle,
   Booking, Trust, Payments, Insurance), Prisma schema for every Section 5 entity + the initial
   migration, Postgres/Redis wiring, BullMQ queue infrastructure, pluggable auth (mock provider
-  + guards), Sentry, a health check, and the four external-integration adapters
-  (Payments/Stripe, BackgroundCheck/Checkr, Telematics/Smartcar, Insurance) behind interfaces
-  with **mock implementations**.
+  - guards), Sentry, a health check, and the four external-integration adapters
+    (Payments/Stripe, BackgroundCheck/Checkr, Telematics/Smartcar, Insurance) behind interfaces
+    with **mock implementations**.
 - **Tooling:** ESLint, Prettier, GitHub Actions CI (generate → validate → typecheck → lint →
   test → build), docker-compose for local Postgres + Redis.
 
@@ -47,10 +47,27 @@ Delivered so far (first vertical slice, all layers):
 Still to do this phase: vehicle onboarding inspection, Smart Calendar (`AvailabilityRule`)
 engine + calendar sync, the full owner earnings dashboard, and the Expo mobile shell.
 
-## Phase 2 — Driver side & vetting
+## 🚧 Phase 2 — Driver side & vetting — **in progress**
 
 Driver onboarding, **real** Checkr integration, licence verification, Trust Engine v1 wired to
 persistence (snapshots + events + nightly recompute), vehicle discovery filtered by trust tier.
+
+Delivered so far (driver vertical slice, all layers):
+
+- **Shared:** onboarding readiness (`driverOnboardingSteps`, `isDriverApproved`), tenure,
+  next-tier progress (`trustProgress`), `minimumTrustTierFor`, and the redacted
+  `DiscoverableVehicle` projection, all unit-tested.
+- **Backend:** driver registration (starts the background check through the adapter), `GET
+/api/drivers/me`, check refresh (a CLEAR result also verifies the licence), payout account via
+  the payments adapter, and `GET /api/vehicles/discover` with tier locking. Drivers become ACTIVE
+  when onboarding completes. Same-login owner/driver accounts become `BOTH`.
+- **Mobile (`apps/mobile`):** Expo SDK 57 app with sign-up, Get approved, Trust and Find a car
+  (design screens D1–D3). Bookings and Earnings tabs are placeholders until Phases 3–4.
+- **DB:** `DriverProfile.payoutAccountId` (migration `20260924120000`).
+
+Still to do this phase: real Checkr + Stripe Connect onboarding links, Clerk Expo sign-in,
+TrustScoreSnapshot/TrustEvent persistence and the nightly recompute, and the ops review queue
+for CONSIDER checks.
 
 ## Phase 3 — Booking, handoff, insurance state machine
 

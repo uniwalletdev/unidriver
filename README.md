@@ -57,6 +57,7 @@ apps/
       auth/           Pluggable auth provider + guards
       adapters/       Stripe / Checkr / Smartcar / Insurance (interface + mock)
       modules/        identity · vehicle · booking · trust · payments · insurance
+  mobile/             Expo (React Native) — iOS/Android app, driver mode
   web/                Next.js (App Router) — Owner dashboard + landing
     app/              routes (/, /owner)
     lib/api.ts        typed API client (imports @unidriver/shared)
@@ -64,8 +65,8 @@ packages/
   shared/             TypeScript domain types + pure business logic shared everywhere
 ```
 
-The React Native (`apps/mobile`) workspace slots into the existing `apps/*` glob without
-restructuring when Phase 1 mobile work begins.
+`apps/mobile` is the Expo app for iOS and Android (driver mode today, owner mode next); it
+shares `@unidriver/shared` with the API and web.
 
 ## Getting started
 
@@ -103,6 +104,32 @@ Auth uses a dev bearer token `dev:<userId>:<ROLE>` by default; set `AUTH_PROVIDE
 | `GET`  | `/api/vehicles/mine`         | OWNER                          | My vehicles                                 |
 | `GET`  | `/api/vehicles/:id`          | owner of the vehicle, or ADMIN | Vehicle by id (404 for anyone else)         |
 | `POST` | `/api/vehicles/:id/activate` | OWNER                          | Activate (enforces agreed-value guard)      |
+
+### Phase 2 endpoints (Driver vertical slice)
+
+| Method | Path                               | Auth   | Purpose                                                 |
+| ------ | ---------------------------------- | ------ | ------------------------------------------------------- |
+| `POST` | `/api/drivers/register`            | public | Create driver User + DriverProfile, start the check     |
+| `GET`  | `/api/drivers/me`                  | DRIVER | Onboarding checklist, approval, Trust tier progress     |
+| `POST` | `/api/drivers/me/background-check` | DRIVER | Start the check if needed, else refresh its status      |
+| `POST` | `/api/drivers/me/payout-account`   | DRIVER | Create/refresh the Stripe Connect payout account        |
+| `GET`  | `/api/vehicles/discover`           | DRIVER | Live cars in the driver's region, redacted, tier-locked |
+
+An owner who registers as a driver (or a driver who registers as an owner) with the same login
+becomes `BOTH`.
+
+### Run the mobile app (driver mode)
+
+`apps/mobile` is an Expo (SDK 57, Expo Router) app for iOS and Android. It starts in driver mode:
+sign-up, the "Get approved" checklist, Trust tier progress, and Find a car.
+
+```bash
+pnpm --filter @unidriver/mobile dev          # then press i (iOS simulator), a (Android) or w (web)
+EXPO_PUBLIC_API_URL=http://<your-LAN-IP>:4000 pnpm --filter @unidriver/mobile dev   # physical device
+```
+
+On a phone or the Android emulator, `localhost` is the device itself, so point
+`EXPO_PUBLIC_API_URL` at your machine's LAN IP. Builds for the stores use EAS (`npx eas-cli build`).
 
 ## Common commands
 

@@ -230,6 +230,8 @@ model DriverProfile {
   joinedAt              DateTime              @default(now())
   lastActiveAt          DateTime?
   bankAccountConnected  Boolean               @default(false)
+  /// Stripe Connect account that receives the driver's trip share.
+  payoutAccountId       String?
 
   @@index([trustTier])
 }

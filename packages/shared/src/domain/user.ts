@@ -36,6 +36,8 @@ export interface DriverProfile {
   joinedAt: Date;
   lastActiveAt: Date | null;
   bankAccountConnected: boolean;
+  /** Stripe Connect payout account id. */
+  payoutAccountId: string | null;
 }
 
 export interface OwnerProfile {

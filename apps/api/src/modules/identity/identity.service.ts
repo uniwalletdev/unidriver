@@ -30,8 +30,19 @@ export class IdentityService {
         where: { authProviderId },
         include: { ownerProfile: true },
       });
-      if (existing) {
+      if (existing?.ownerProfile) {
         return existing;
+      }
+      if (existing) {
+        // A driver adding a car: same login, now both roles.
+        return this.prisma.user.update({
+          where: { id: existing.id },
+          data: {
+            role: existing.role === UserRole.DRIVER ? UserRole.BOTH : existing.role,
+            ownerProfile: { create: {} },
+          },
+          include: { ownerProfile: true },
+        });
       }
     }
     try {

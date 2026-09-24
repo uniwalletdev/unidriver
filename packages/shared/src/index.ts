@@ -12,6 +12,7 @@ export * from './payout';
 export * from './booking';
 export * from './car-note';
 export * from './vehicle';
+export * from './driver';
 export * from './dto';
 
 export * from './domain/user';

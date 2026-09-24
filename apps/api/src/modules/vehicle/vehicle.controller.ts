@@ -22,6 +22,13 @@ export class VehicleController {
     return this.vehicles.listForOwner(user.userId);
   }
 
+  /** Declared before `:id` so "discover" is not captured as an id. */
+  @Roles(UserRole.DRIVER)
+  @Get('discover')
+  discover(@CurrentUser() user: AuthClaims) {
+    return this.vehicles.discover(user.userId);
+  }
+
   @Get(':id')
   get(@CurrentUser() user: AuthClaims, @Param('id') id: string) {
     return this.vehicles.get(id, user);

@@ -8,6 +8,12 @@ import {
 import { Prisma, VehicleStatus } from '@prisma/client';
 import {
   canActivateVehicle,
+  canBookVehicleTier,
+  DiscoverableVehicle,
+  FuelPolicy,
+  minimumTrustTierFor,
+  tenureMonths,
+  trustProgress,
   checkVehicleYear,
   CreateVehicleInput,
   isValidVin,
@@ -85,6 +91,44 @@ export class VehicleService {
 
   async listForOwner(ownerId: string) {
     return this.prisma.vehicle.findMany({ where: { ownerId }, orderBy: { createdAt: 'desc' } });
+  }
+
+  /**
+   * Live cars a driver can browse in their region (D3), redacted to `DiscoverableVehicle`.
+   * Cars above the driver's tier are returned `locked` so the app can show what unlocks them;
+   * booking re-checks `canBookVehicleTier` server-side (spec §6.2, §15).
+   */
+  async discover(driverId: string): Promise<DiscoverableVehicle[]> {
+    const driver = await this.prisma.user.findUnique({
+      where: { id: driverId },
+      include: { driverProfile: true },
+    });
+    if (!driver?.driverProfile) {
+      throw new NotFoundException('Register as a driver to browse cars');
+    }
+    const p = driver.driverProfile;
+    const { tier } = trustProgress(p.trustScore, p.completedTrips, tenureMonths(p.joinedAt));
+    const vehicles = await this.prisma.vehicle.findMany({
+      where: { region: driver.region, status: VehicleStatus.ACTIVE, ownerId: { not: driverId } },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+    return vehicles
+      .map((v) => {
+        const vehicleTier = v.tier as unknown as VehicleTier;
+        return {
+          id: v.id,
+          make: v.make,
+          model: v.model,
+          year: v.year,
+          tier: vehicleTier,
+          fuelPolicy: v.fuelPolicy as unknown as FuelPolicy,
+          mileageCapPerBooking: v.mileageCapPerBooking,
+          locked: !canBookVehicleTier(tier, vehicleTier),
+          requiredTrustTier: minimumTrustTierFor(vehicleTier),
+        };
+      })
+      .sort((a, b) => Number(a.locked) - Number(b.locked));
   }
 
   /**

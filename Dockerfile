@@ -10,7 +10,9 @@ RUN corepack enable \
 WORKDIR /app
 
 COPY . .
-RUN pnpm install --frozen-lockfile
+# Only the API and the workspace packages it depends on: the web and mobile toolchains stay out
+# of the server image.
+RUN pnpm install --frozen-lockfile --filter "@unidriver/api..."
 RUN pnpm --filter @unidriver/shared build \
   && pnpm --filter @unidriver/api prisma:generate \
   && pnpm --filter @unidriver/api build
