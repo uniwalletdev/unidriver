@@ -99,3 +99,39 @@ permission at runtime, so ask after the first car is listed. Use the Photo Picke
 permission) and `android_ripple` on pressables. Ship an `.aab` through EAS Build, starting on the
 Play internal testing track, and fill in the Play Data safety form (name, email, phone, VIN,
 photos, approximate location).
+
+## Drivers, Business and ops
+
+The owner app is one of four surfaces. Riders who book through Uber or Lyft never see UniDriver:
+their rides arrive as ingested trips. UniDriver's own riders are staff at Business clients
+(`UNIDRIVER_CORP` trips).
+
+| Who                     | Surface                           | Phase |
+| ----------------------- | --------------------------------- | ----- |
+| Owner                   | Owner mode in the mobile app, web | 1     |
+| Driver                  | Driver mode in the mobile app     | 2–4   |
+| Owner who drives (BOTH) | Same app, mode switch in Account  | 2     |
+| Business admin          | Business web console              | 7     |
+| Business staff (riders) | Business screens in the app / web | 7     |
+| UniDriver ops           | Internal ops console              | 2–5   |
+
+**Driver app screens:** D1 Get approved (licence, rideshare account, background check,
+payout account), D2 Trust (score, tier, keep rate, and the next tier's score/trips/tenure
+progress), D3 Find a car (by shift window; cars above the driver's tier are dimmed and name the
+tier that unlocks them, with `canBookVehicleTier` still enforced on the server), D4 Booking
+timeline (the booking state machine, and a free cancel with auto-rebook if the owner reclaims),
+D5 Pickup check (8 photos, odometer, fuel, both people confirm), and D6 On shift (coverage state,
+return countdown, mileage cap, synced trips at the keep rate).
+
+**Business:** B1 web console (rides, spend, and a ride policy that sets the minimum driver tier
+using the same thresholds as driver gating) and B2 staff "Book a ride" (billed to the company).
+
+**Ops console:** one queue sorted by deadline, covering claims (`slaDueAt`), CONSIDER background
+checks, `FLAGGED_REVIEW` payouts, Luxury/Exotic cars without an agreed value, and trust appeals.
+
+### Pricing finding
+
+At Established driver + Active owner + Comfort, the platform keeps 11% − 6% = **5% of gross**. On
+a $142.50 shift that is $7.13, so a $9.00 per-trip insurance cost gives a platform net of
+**−$1.87** (`computePayout` flags it for review). Revisit insurance cost allocation or tier rates
+before Phase 4.
